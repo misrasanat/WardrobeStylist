@@ -2,12 +2,12 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
 // Runs the /api/*.js serverless functions inside the Vite dev server, so
-// `npm run dev` alone gives a working local app (same files Vercel deploys
+// `npm run dev` alone gives a working local app (same files Netlify deploys
 // in production — this plugin only applies to `vite dev`, not the build).
 function localApiRoutes() {
   const routes = {
-    '/api/analyze': () => import('./api/analyze.js'),
-    '/api/suggest': () => import('./api/suggest.js'),
+    '/api/analyze': () => import('./netlify/functions/analyze.js'),
+    '/api/suggest': () => import('./netlify/functions/suggest.js'),
   }
 
   return {
