@@ -1,0 +1,60 @@
+:root {
+  --text: #4b4555;
+  --text-h: #1a1625;
+  --bg: #faf9fc;
+  --surface: #ffffff;
+  --border: #e5e4e7;
+  --accent: #aa3bff;
+  --accent-hover: #9525f0;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --danger: #d64545;
+  --shadow: rgba(0, 0, 0, 0.08) 0 4px 12px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #b9b4c2;
+    --text-h: #f3f1f6;
+    --bg: #14121a;
+    --surface: #1e1b26;
+    --border: #322e3d;
+    --accent: #c084fc;
+    --accent-hover: #d3a4fd;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --shadow: rgba(0, 0, 0, 0.4) 0 4px 12px -2px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1, h2, h3 {
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font: inherit;
+}
