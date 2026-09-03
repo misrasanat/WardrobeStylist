@@ -78,19 +78,28 @@ function describeCombo(items, ids) {
   return pieces.join(' + ')
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    }
   }
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Server missing GEMINI_API_KEY' })
+    }
   }
 
-  const { items, occasion, season, feedback } = req.body ?? {}
+  const { items, occasion, season, feedback } = JSON.parse(event.body || '{}')
   if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'No wardrobe items provided' })
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'No wardrobe items provided' })
+    }
   }
 
   const userFeedback = feedback || { liked: [], disliked: [] }
@@ -114,13 +123,19 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const text = await response.text()
-      return res.status(502).json({ error: `Gemini error: ${text}` })
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: `Gemini error: ${text}` })
+      }
     }
 
     const data = await response.json()
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) {
-      return res.status(502).json({ error: 'Gemini returned no suggestions' })
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: 'Gemini returned no suggestions' })
+      }
     }
 
     const outfits = JSON.parse(text)
@@ -130,8 +145,14 @@ export default async function handler(req, res) {
       }))
       .filter((outfit) => outfit.item_ids.length >= 2)
 
-    return res.status(200).json({ outfits })
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ outfits })
+    }
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message })
+    }
   }
 }

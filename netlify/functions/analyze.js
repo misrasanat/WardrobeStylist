@@ -32,19 +32,28 @@ item and describe it. Respond only with the requested JSON fields:
 - style_tags: 2-4 style descriptors (e.g. "casual", "formal", "sporty", "streetwear", "business")
 - material: best guess at fabric/material if visible, otherwise omit`
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    }
   }
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Server missing GEMINI_API_KEY' })
+    }
   }
 
-  const { image, mimeType } = req.body ?? {}
+  const { image, mimeType } = JSON.parse(event.body || '{}')
   if (!image || !mimeType) {
-    return res.status(400).json({ error: 'Missing image or mimeType' })
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Missing image or mimeType' })
+    }
   }
 
   try {
@@ -69,18 +78,30 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const text = await response.text()
-      return res.status(502).json({ error: `Gemini error: ${text}` })
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: `Gemini error: ${text}` })
+      }
     }
 
     const data = await response.json()
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) {
-      return res.status(502).json({ error: 'Gemini returned no analysis' })
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: 'Gemini returned no analysis' })
+      }
     }
 
     const tags = JSON.parse(text)
-    return res.status(200).json(tags)
+    return {
+      statusCode: 200,
+      body: JSON.stringify(tags)
+    }
   } catch (err) {
-    return res.status(500).json({ error: err.message })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message })
+    }
   }
 }
