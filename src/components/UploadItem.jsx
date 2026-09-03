@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { compressImage, blobToBase64 } from '../lib/imageUtils'
-import { uploadClothingImage } from '../lib/storage'
+import { uploadClothingImage, getSignedUrl } from '../lib/storage'
 
 const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory']
 const SEASONS = ['spring', 'summer', 'fall', 'winter']
@@ -19,7 +19,7 @@ const EMPTY_FORM = {
   notes: '',
 }
 
-export default function UploadItem({ onClose, onSaved }) {
+export default function UploadItem({ onClose, onSaved, editItem }) {
   const { user } = useAuth()
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -29,6 +29,24 @@ export default function UploadItem({ onClose, onSaved }) {
   const [error, setError] = useState('')
   const [stream, setStream] = useState(null)
   const [countdown, setCountdown] = useState(null)
+
+  useEffect(() => {
+    if (editItem) {
+      setForm({
+        category: editItem.category,
+        subcategory: editItem.subcategory || '',
+        primary_color: editItem.primary_color || '',
+        secondary_colors: (editItem.secondary_colors || []).join(', '),
+        pattern: editItem.pattern || '',
+        seasons: editItem.seasons || [],
+        style_tags: (editItem.style_tags || []).join(', '),
+        material: editItem.material || '',
+        notes: editItem.notes || '',
+      })
+      setStatus('ready')
+      getSignedUrl(editItem.image_path).then(setPreviewUrl).catch(() => {})
+    }
+  }, [editItem])
 
   async function handleFileChange(e) {
     const selected = e.target.files?.[0]
@@ -177,17 +195,14 @@ export default function UploadItem({ onClose, onSaved }) {
 
   async function handleSave(e) {
     e.preventDefault()
-    if (!blob) {
+    if (!editItem && !blob) {
       setError('Choose a photo first.')
       return
     }
     setStatus('saving')
     setError('')
     try {
-      const path = await uploadClothingImage(user.id, blob)
-      const { error: insertError } = await supabase.from('clothing_items').insert({
-        user_id: user.id,
-        image_path: path,
+      const itemData = {
         category: form.category,
         subcategory: form.subcategory || null,
         primary_color: form.primary_color || null,
@@ -197,8 +212,30 @@ export default function UploadItem({ onClose, onSaved }) {
         style_tags: splitList(form.style_tags),
         material: form.material || null,
         notes: form.notes || null,
-      })
-      if (insertError) throw insertError
+      }
+
+      if (editItem) {
+        // Update existing item
+        if (blob) {
+          // New photo uploaded, replace image
+          const path = await uploadClothingImage(user.id, blob)
+          itemData.image_path = path
+        }
+        const { error: updateError } = await supabase
+          .from('clothing_items')
+          .update(itemData)
+          .eq('id', editItem.id)
+        if (updateError) throw updateError
+      } else {
+        // Create new item
+        const path = await uploadClothingImage(user.id, blob)
+        const { error: insertError } = await supabase.from('clothing_items').insert({
+          user_id: user.id,
+          image_path: path,
+          ...itemData,
+        })
+        if (insertError) throw insertError
+      }
       onSaved()
     } catch (err) {
       setError(err.message)
@@ -210,13 +247,13 @@ export default function UploadItem({ onClose, onSaved }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Add clothing item</h2>
+          <h2>{editItem ? 'Edit clothing item' : 'Add clothing item'}</h2>
           <button className="icon-button" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
-        {!file && status !== 'camera' && (
+        {!file && !editItem && status !== 'camera' && (
           <div className="upload-options">
             <label className="file-drop">
               Choose a photo

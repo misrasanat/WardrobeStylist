@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSignedUrl } from '../lib/storage'
 
-export default function ClothingCard({ item, onDelete, selectable, selected, onToggleSelect }) {
+export default function ClothingCard({ item, onDelete, onEdit, selectable, selected, onToggleSelect }) {
   const [imageUrl, setImageUrl] = useState(null)
 
   useEffect(() => {
@@ -38,17 +38,33 @@ export default function ClothingCard({ item, onDelete, selectable, selected, onT
           ))}
         </div>
       </div>
-      {onDelete && (
-        <button
-          className="icon-button delete-button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(item)
-          }}
-          aria-label="Delete item"
-        >
-          🗑
-        </button>
+      {(onDelete || onEdit) && (
+        <div className="card-actions">
+          {onEdit && (
+            <button
+              className="icon-button edit-button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(item)
+              }}
+              aria-label="Edit item"
+            >
+              ✏️
+            </button>
+          )}
+          {onDelete && (
+            <button
+              className="icon-button delete-button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(item)
+              }}
+              aria-label="Delete item"
+            >
+              🗑
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

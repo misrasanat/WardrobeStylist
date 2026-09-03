@@ -1,4 +1,4 @@
-const MODEL = 'gemini-3.6-flash'
+const MODEL = 'gemini-3.5-flash-lite'
 
 const RESPONSE_SCHEMA = {
   type: 'ARRAY',
@@ -13,22 +13,69 @@ const RESPONSE_SCHEMA = {
   },
 }
 
-function buildPrompt(items, occasion, season) {
+function buildPrompt(items, occasion, season, feedback) {
   const catalog = items.map(({ id, category, subcategory, primary_color, secondary_colors, pattern, seasons, style_tags, material }) => ({
     id, category, subcategory, primary_color, secondary_colors, pattern, seasons, style_tags, material,
   }))
 
-  return `You are a personal stylist. Here is the user's wardrobe catalog as JSON:
-${JSON.stringify(catalog)}
+  let feedbackContext = ''
+  if (feedback.liked.length > 0 || feedback.disliked.length > 0) {
+    feedbackContext = `\n\nSTYLE LEARNING:
+${feedback.liked.length > 0 ? `The user LOVED these combinations (learn their style from these):
+${feedback.liked.map(f => `- Items [${f.item_ids.join(', ')}]: ${describeCombo(items, f.item_ids)}`).join('\n')}` : ''}
+${feedback.disliked.length > 0 ? `The user DISLIKED these combinations (avoid similar patterns):
+${feedback.disliked.map(f => `- Items [${f.item_ids.join(', ')}]: ${describeCombo(items, f.item_ids)}`).join('\n')}` : ''}
 
-Suggest 3 distinct complete outfits using ONLY the item ids above (never invent new ids).
-Each outfit should form a wearable combination (typically a top + bottom, or a dress, plus
-optionally outerwear/shoes/accessories) with good color and style coherence.
-${occasion ? `The occasion is: ${occasion}.` : ''}
-${season ? `It should suit this season: ${season}.` : ''}
-For each outfit give: a short catchy title, the list of item ids used, and a one or two
-sentence rationale explaining why the colors/styles work together and why it fits the
-occasion/season. If the wardrobe lacks enough variety, still return your best 3 attempts.`
+Use this feedback to understand their aesthetic preferences and suggest outfits aligned with what they love.`
+  }
+
+  return `You are an expert fashion stylist. Here is the user's wardrobe:
+${JSON.stringify(catalog)}
+${feedbackContext}
+
+STYLING RULES (CRITICAL):
+1. COLOR HARMONY: Use complementary or analogous colors. Avoid clashing (e.g. red+pink, orange+purple unless intentional high-fashion).
+   - Neutrals (black, white, gray, beige, navy) pair with anything
+   - Denim goes with almost any color
+   - Monochrome (all one color family) is always safe
+   - Pops of color work best as accents (1 colorful piece + neutrals)
+
+2. OUTFIT STRUCTURE: Not every outfit needs a jacket!
+   - Warm weather: top + bottom, or just a dress
+   - Cool weather: add outerwear ONLY if it makes sense
+   - Shoes and accessories are optional finishing touches, not requirements
+
+3. LAYERING RULES (CRITICAL - NO EXCEPTIONS):
+   - NEVER pair a hoodie with a jacket/blazer/outerwear - pick ONE outer layer
+   - NEVER put outerwear over outerwear (no jacket over jacket)
+   - Hoodies are the outer layer - they don't go under jackets
+   - Valid layers: base layer (t-shirt/tank) → mid layer (shirt/sweater) → outerwear (jacket/coat/hoodie)
+   - A hoodie IS outerwear, not a mid-layer
+
+4. PATTERN MIXING: Generally avoid multiple bold patterns unless you're confident they work
+   - One patterned piece + solid pieces is safest
+   - Small patterns can work with larger ones if colors align
+
+5. STYLE COHERENCE: Mix tags within reason (casual + sporty works, formal + streetwear usually doesn't)
+   - Keep the vibe consistent (don't pair a blazer with gym shorts)
+
+6. SEASON MATCHING: ${season ? `It's ${season} - dress appropriately.` : 'Check item seasons and dress weather-appropriate.'}
+   - Summer: light fabrics, no heavy outerwear
+   - Winter: layers, outerwear appropriate
+
+${occasion ? `OCCASION: ${occasion} - style accordingly.` : ''}
+
+Suggest 3 distinct, genuinely stylish outfits using ONLY item ids from the catalog (never invent ids).
+Each outfit should look cohesive and intentional, not randomly thrown together.
+Return: title (short, catchy), item_ids (the specific items), rationale (why this combo works - colors, style, occasion).`
+}
+
+function describeCombo(items, ids) {
+  const pieces = ids.map(id => {
+    const item = items.find(i => i.id === id)
+    return item ? `${item.primary_color} ${item.subcategory || item.category}` : 'item'
+  }).filter(Boolean)
+  return pieces.join(' + ')
 }
 
 export default async function handler(req, res) {
@@ -41,11 +88,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' })
   }
 
-  const { items, occasion, season } = req.body ?? {}
+  const { items, occasion, season, feedback } = req.body ?? {}
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'No wardrobe items provided' })
   }
 
+  const userFeedback = feedback || { liked: [], disliked: [] }
   const validIds = new Set(items.map((item) => item.id))
 
   try {
@@ -55,7 +103,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: buildPrompt(items, occasion, season) }] }],
+          contents: [{ parts: [{ text: buildPrompt(items, occasion, season, userFeedback) }] }],
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: RESPONSE_SCHEMA,

@@ -25,8 +25,18 @@ create table if not exists public.outfits (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.outfit_feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_ids uuid[] not null,  -- the specific items in this outfit combo
+  liked boolean not null,     -- true = liked, false = disliked
+  created_at timestamptz not null default now(),
+  unique(user_id, item_ids)   -- one feedback per combo per user
+);
+
 alter table public.clothing_items enable row level security;
 alter table public.outfits enable row level security;
+alter table public.outfit_feedback enable row level security;
 
 drop policy if exists "Users manage their own clothing items" on public.clothing_items;
 create policy "Users manage their own clothing items"
@@ -38,6 +48,13 @@ create policy "Users manage their own clothing items"
 drop policy if exists "Users manage their own outfits" on public.outfits;
 create policy "Users manage their own outfits"
   on public.outfits
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users manage their own outfit feedback" on public.outfit_feedback;
+create policy "Users manage their own outfit feedback"
+  on public.outfit_feedback
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

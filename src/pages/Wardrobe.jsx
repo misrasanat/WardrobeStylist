@@ -11,6 +11,7 @@ export default function Wardrobe() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showUpload, setShowUpload] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('all')
 
   useEffect(() => {
@@ -38,6 +39,10 @@ export default function Wardrobe() {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  function handleEdit(item) {
+    setEditingItem(item)
   }
 
   const categories = ['all', ...new Set(items.map((i) => i.category))]
@@ -76,7 +81,7 @@ export default function Wardrobe() {
       ) : (
         <div className="clothing-grid">
           {visibleItems.map((item) => (
-            <ClothingCard key={item.id} item={item} onDelete={handleDelete} />
+            <ClothingCard key={item.id} item={item} onDelete={handleDelete} onEdit={handleEdit} />
           ))}
         </div>
       )}
@@ -86,6 +91,17 @@ export default function Wardrobe() {
           onClose={() => setShowUpload(false)}
           onSaved={() => {
             setShowUpload(false)
+            loadItems()
+          }}
+        />
+      )}
+
+      {editingItem && (
+        <UploadItem
+          editItem={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSaved={() => {
+            setEditingItem(null)
             loadItems()
           }}
         />

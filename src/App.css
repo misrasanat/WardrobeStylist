@@ -271,10 +271,20 @@ input, select, textarea {
   border-radius: 999px;
 }
 
-.delete-button {
+.card-actions {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.edit-button {
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+}
+
+.delete-button {
   background: rgba(0, 0, 0, 0.55);
   color: white;
 }
@@ -485,11 +495,51 @@ input, select, textarea {
   padding: 20px;
 }
 
+.outfit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
 .outfit-card h3 {
-  margin: 0 0 6px;
+  margin: 0;
+}
+
+.outfit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-button:hover:not(.liked):not(.disliked) {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.feedback-button.liked {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: white;
+}
+
+.feedback-button.disliked {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
 }
 
 .outfit-rationale {
   color: var(--text);
-  margin: 0 0 16px;
+  margin: 12px 0 16px;
 }
